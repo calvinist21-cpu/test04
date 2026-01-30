@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>장바구니 · 쇼핑몰</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --cart-primary: #e8344e;
+      --cart-primary-hover: #d42d45;
+      --cart-bg: #f5f5f5;
+      --cart-card-bg: #fff;
+      --cart-border: #e0e0e0;
+      --cart-text: #333;
+      --cart-text-muted: #666;
+      --cart-font: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--cart-bg); font-family: var(--cart-font); color: var(--cart-text); }
+    .cart-page { padding: 1rem; max-width: 1200px; margin: 0 auto; }
+    .cart-header { margin-bottom: 1.5rem; }
+    .cart-header h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 0.25rem 0; }
+    .cart-header-summary { margin: 0; font-size: 0.9rem; color: var(--cart-text-muted); }
+    .cart-layout { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; align-items: start; }
+    .cart-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .cart-item-row {
+      display: grid;
+      grid-template-columns: auto 100px 1fr auto auto;
+      gap: 1rem;
+      align-items: center;
+      background: var(--cart-card-bg);
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--cart-border);
+    }
+    .cart-item-check input { width: 18px; height: 18px; cursor: pointer; }
+    .cart-item-image { width: 100px; height: 100px; border-radius: 6px; overflow: hidden; background: var(--cart-bg); }
+    .cart-item-image img { width: 100%; height: 100%; object-fit: cover; }
+    .cart-item-info { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+    .cart-item-name { font-weight: 500; font-size: 0.95rem; line-height: 1.3; }
+    .cart-item-price { font-size: 0.85rem; color: var(--cart-text-muted); }
+    .cart-item-qty {
+      display: flex; align-items: center; gap: 0;
+      border: 1px solid var(--cart-border); border-radius: 6px; overflow: hidden;
+    }
+    .cart-item-qty button {
+      width: 32px; height: 32px; border: none; background: var(--cart-bg);
+      cursor: pointer; font-size: 1.1rem; line-height: 1; color: var(--cart-text);
+    }
+    .cart-item-qty button:hover { background: var(--cart-border); }
+    .cart-item-qty input {
+      width: 44px; height: 32px; border: none;
+      border-left: 1px solid var(--cart-border); border-right: 1px solid var(--cart-border);
+      text-align: center; font-size: 0.9rem;
+    }
+    .cart-item-subtotal { font-weight: 600; font-size: 1rem; min-width: 100px; text-align: right; }
+    .cart-summary-panel {
+      background: var(--cart-card-bg); border: 1px solid var(--cart-border);
+      border-radius: 8px; padding: 1.25rem; position: sticky; top: 1rem;
+    }
+    .cart-summary-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem 0; }
+    .cart-summary-actions { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .cart-summary-actions button {
+      padding: 0.4rem 0.75rem; border: 1px solid var(--cart-border);
+      background: var(--cart-card-bg); border-radius: 6px; font-size: 0.85rem;
+      cursor: pointer; color: var(--cart-text);
+    }
+    .cart-summary-actions button:hover { background: var(--cart-bg); }
+    .cart-summary-list { margin: 0 0 1rem 0; }
+    .cart-summary-row { display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 0.9rem; }
+    .cart-summary-row dt { margin: 0; color: var(--cart-text-muted); }
+    .cart-summary-row dd { margin: 0; font-weight: 500; }
+    .cart-summary-total { border-top: 1px solid var(--cart-border); margin-top: 0.5rem; padding-top: 0.75rem; font-size: 1rem; font-weight: 700; }
+    .cart-summary-checkout {
+      width: 100%; padding: 0.9rem 1rem; border: none; border-radius: 8px;
+      background: var(--cart-primary); color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer;
+    }
+    .cart-summary-checkout:hover { background: var(--cart-primary-hover); }
+    @media (max-width: 767px) {
+      .cart-layout { grid-template-columns: 1fr; }
+      .cart-summary-panel { position: sticky; bottom: 0; top: auto; }
+      .cart-item-row { grid-template-columns: auto 80px 1fr; grid-template-rows: auto auto; }
+      .cart-item-qty { grid-column: 2; grid-row: 2; }
+      .cart-item-subtotal { grid-column: 3; grid-row: 2; text-align: right; }
+    }
+  </style>
+</head>
+<body>
+  <div class="cart-page">
+    <header class="cart-header">
+      <h1>장바구니</h1>
+      <p class="cart-header-summary" id="headerSummary">선택 상품 0개 · 총 0원</p>
+    </header>
+    <div class="cart-layout">
+      <section class="cart-list-section">
+        <div class="cart-list" id="cartList"></div>
+      </section>
+      <aside class="cart-summary-panel">
+        <h2 class="cart-summary-title">주문 요약</h2>
+        <div class="cart-summary-actions">
+          <button type="button" id="btnSelectAll">전체 선택</button>
+          <button type="button" id="btnUnselectAll">전체 해제</button>
+        </div>
+        <dl class="cart-summary-list">
+          <div class="cart-summary-row">
+            <dt>선택 상품 (<span id="summaryCount">0</span>개)</dt>
+            <dd id="summaryItemsPrice">0원</dd>
+          </div>
+          <div class="cart-summary-row">
+            <dt>배송비</dt>
+            <dd id="summaryShipping">0원</dd>
+          </div>
+          <div class="cart-summary-row cart-summary-total">
+            <dt>총 결제금액</dt>
+            <dd id="summaryTotal">0원</dd>
+          </div>
+        </dl>
+        <button type="button" class="cart-summary-checkout">결제하기</button>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+      var CART_KEY = 'cart.items.v1';
+      var SHIPPING_FREE = 50000;
+      var SHIPPING_FEE = 3000;
+
+      function copyItem(item, overrides) {
+        var o = {};
+        var k;
+        for (k in item) { if (Object.prototype.hasOwnProperty.call(item, k)) { o[k] = item[k]; } }
+        if (overrides) { for (k in overrides) { if (Object.prototype.hasOwnProperty.call(overrides, k)) { o[k] = overrides[k]; } } }
+        return o;
+      }
+
+      function findItemById(items, id) {
+        for (var i = 0; i < items.length; i++) { if (items[i].id === id) return items[i]; }
+        return null;
+      }
+
+      function findParentRow(el) {
+        while (el && el !== document.body) {
+          if (el.className && el.className.indexOf('cart-item-row') !== -1) return el;
+          el = el.parentElement;
+        }
+        return null;
+      }
+
+      function dataUriPlaceholder(text) {
+        var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">' +
+          '<rect width="120" height="120" fill="#e8e8e8"/>' +
+          '<text x="60" y="62" text-anchor="middle" font-size="14" fill="#666" font-family="sans-serif">' + String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</text></svg>';
+        return 'data:image/svg+xml,' + encodeURIComponent(svg);
+      }
+
+      var SEED = [
+        { id: 'seed-1', name: '삼성전자 비스포크 냉장고 4도어', price: 1890000, quantity: 1, selected: true, imageUrl: '', category: '신혼 가전' },
+        { id: 'seed-2', name: 'LG전자 트롬 세탁기 21kg', price: 899000, quantity: 1, selected: true, imageUrl: '', category: '신혼 가전' },
+        { id: 'seed-3', name: '다이슨 V15 무선 청소기', price: 849000, quantity: 1, selected: true, imageUrl: '', category: '신혼 가전' },
+        { id: 'seed-4', name: '에어프라이어 대용량 18L', price: 129000, quantity: 1, selected: true, imageUrl: '', category: '신혼 가전' },
+        { id: 'seed-5', name: '공기청정기 미니 대용량', price: 159000, quantity: 1, selected: true, imageUrl: '', category: '신혼 가전' }
+      ];
+      for (var s = 0; s < SEED.length; s++) {
+        var labels = ['냉장고', '세탁기', '청소기', '에어프라이어', '공기청정기'];
+        SEED[s].imageUrl = dataUriPlaceholder(labels[s] || '');
+      }
+
+      function escapeHtml(str) {
+        if (str == null) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function getCart() {
+        try {
+          var raw = localStorage.getItem(CART_KEY);
+          if (!raw) return null;
+          var arr = JSON.parse(raw);
+          return Array.isArray(arr) ? arr : null;
+        } catch (e) { return null; }
+      }
+
+      function saveCart(items) {
+        try {
+          localStorage.setItem(CART_KEY, JSON.stringify(items));
+          return true;
+        } catch (e) { return false; }
+      }
+
+      function ensureSelection(items) {
+        var out = [];
+        for (var i = 0; i < items.length; i++) { out.push(copyItem(items[i], { selected: true })); }
+        return out;
+      }
+
+      function toggleSelection(items, itemId) {
+        var out = [];
+        for (var i = 0; i < items.length; i++) {
+          out.push(items[i].id === itemId ? copyItem(items[i], { selected: !items[i].selected }) : copyItem(items[i], null));
+        }
+        return out;
+      }
+
+      function selectAll(items) {
+        var out = [];
+        for (var i = 0; i < items.length; i++) { out.push(copyItem(items[i], { selected: true })); }
+        return out;
+      }
+
+      function unselectAll(items) {
+        var out = [];
+        for (var i = 0; i < items.length; i++) { out.push(copyItem(items[i], { selected: false })); }
+        return out;
+      }
+
+      function updateQuantity(items, itemId, qty) {
+        var n = Math.max(1, Math.floor(qty));
+        var out = [];
+        for (var i = 0; i < items.length; i++) {
+          out.push(items[i].id === itemId ? copyItem(items[i], { quantity: n }) : copyItem(items[i], null));
+        }
+        return out;
+      }
+
+      function computeTotals(items) {
+        var selected = items.filter(function (i) { return i.selected; });
+        var itemsTotal = selected.reduce(function (s, i) { return s + i.price * i.quantity; }, 0);
+        var shipping = itemsTotal < SHIPPING_FREE ? SHIPPING_FEE : 0;
+        return {
+          selectedCount: selected.length,
+          itemsTotalPrice: itemsTotal,
+          shippingFee: shipping,
+          grandTotal: itemsTotal + shipping
+        };
+      }
+
+      function formatPrice(n) { return n.toLocaleString('ko-KR') + '원'; }
+
+      function cloneSeed() {
+        var out = [];
+        for (var i = 0; i < SEED.length; i++) { out.push(copyItem(SEED[i], null)); }
+        return out;
+      }
+
+      function loadItems() {
+        var items = getCart();
+        if (!items || items.length === 0) {
+          items = cloneSeed();
+          saveCart(ensureSelection(items));
+        }
+        return items;
+      }
+
+      function getItems() {
+        var items = getCart();
+        if (!items || items.length === 0) {
+          items = cloneSeed();
+          saveCart(ensureSelection(items));
+        }
+        return items;
+      }
+
+      function render() {
+        var items = getItems();
+        var totals = computeTotals(items);
+        var headerSummary = document.getElementById('headerSummary');
+        var summaryCount = document.getElementById('summaryCount');
+        var summaryItemsPrice = document.getElementById('summaryItemsPrice');
+        var summaryShipping = document.getElementById('summaryShipping');
+        var summaryTotal = document.getElementById('summaryTotal');
+        var listEl = document.getElementById('cartList');
+
+        if (headerSummary) headerSummary.textContent = '선택 상품 ' + totals.selectedCount + '개 · 총 ' + formatPrice(totals.grandTotal);
+        if (summaryCount) summaryCount.textContent = totals.selectedCount;
+        if (summaryItemsPrice) summaryItemsPrice.textContent = formatPrice(totals.itemsTotalPrice);
+        if (summaryShipping) summaryShipping.textContent = totals.shippingFee === 0 ? '무료' : formatPrice(totals.shippingFee);
+        if (summaryTotal) summaryTotal.textContent = formatPrice(totals.grandTotal);
+
+        if (!listEl) return;
+        var html = '';
+        for (var i = 0; i < items.length; i++) {
+          var item = items[i];
+          var subtotal = item.price * item.quantity;
+          var imgSrc = (item.imageUrl && item.imageUrl.indexOf('data:') === 0) ? item.imageUrl : dataUriPlaceholder(item.name);
+          html += '<div class="cart-item-row" data-id="' + escapeHtml(item.id) + '">' +
+            '<label class="cart-item-check">' +
+              '<input type="checkbox" ' + (item.selected ? 'checked' : '') + ' data-action="toggle" />' +
+            '</label>' +
+            '<div class="cart-item-image"><img src="' + String(imgSrc).replace(/"/g, '&quot;') + '" alt="' + escapeHtml(item.name) + '" /></div>' +
+            '<div class="cart-item-info">' +
+              '<span class="cart-item-name">' + escapeHtml(item.name) + '</span>' +
+              '<span class="cart-item-price">' + formatPrice(item.price) + '</span>' +
+            '</div>' +
+            '<div class="cart-item-qty">' +
+              '<button type="button" data-action="minus">-</button>' +
+              '<input type="number" min="1" value="' + Number(item.quantity) + '" data-action="qty" />' +
+              '<button type="button" data-action="plus">+</button>' +
+            '</div>' +
+            '<div class="cart-item-subtotal">' + formatPrice(subtotal) + '</div>' +
+            '</div>';
+        }
+        listEl.innerHTML = html;
+
+        var toggles = listEl.querySelectorAll('[data-action="toggle"]');
+        for (var t = 0; t < toggles.length; t++) {
+          (function (cb) {
+            cb.onclick = function () {
+              var row = findParentRow(cb);
+              if (!row) return;
+              var id = row.getAttribute('data-id');
+              var items = toggleSelection(getItems(), id);
+              saveCart(items);
+              render();
+            };
+          })(toggles[t]);
+        }
+
+        var minuses = listEl.querySelectorAll('[data-action="minus"]');
+        for (var m = 0; m < minuses.length; m++) {
+          (function (btn) {
+            btn.onclick = function () {
+              var row = findParentRow(btn);
+              if (!row) return;
+              var id = row.getAttribute('data-id');
+              var current = getItems();
+              var item = findItemById(current, id);
+              if (item && item.quantity > 1) {
+                saveCart(updateQuantity(current, id, item.quantity - 1));
+                render();
+              }
+            };
+          })(minuses[m]);
+        }
+
+        var pluses = listEl.querySelectorAll('[data-action="plus"]');
+        for (var p = 0; p < pluses.length; p++) {
+          (function (btn) {
+            btn.onclick = function () {
+              var row = findParentRow(btn);
+              if (!row) return;
+              var id = row.getAttribute('data-id');
+              var current = getItems();
+              var item = findItemById(current, id);
+              if (item) {
+                saveCart(updateQuantity(current, id, item.quantity + 1));
+                render();
+              }
+            };
+          })(pluses[p]);
+        }
+
+        var qtyInputs = listEl.querySelectorAll('[data-action="qty"]');
+        for (var q = 0; q < qtyInputs.length; q++) {
+          (function (input) {
+            function applyQty() {
+              var row = findParentRow(input);
+              if (!row) return;
+              var id = row.getAttribute('data-id');
+              var qty = parseInt(input.value, 10);
+              if (isNaN(qty) || qty < 1) qty = 1;
+              saveCart(updateQuantity(getItems(), id, qty));
+              render();
+            }
+            input.onchange = applyQty;
+            input.onblur = applyQty;
+          })(qtyInputs[q]);
+        }
+      }
+
+      function showError(msg) {
+        var listEl = document.getElementById('cartList');
+        var headerEl = document.getElementById('headerSummary');
+        if (listEl) listEl.innerHTML = '<p class="cart-error" style="padding:2rem;color:#c00;text-align:center;">' + escapeHtml(msg) + '</p>';
+        if (headerEl) headerEl.textContent = msg;
+      }
+
+      function init() {
+        try {
+          if (typeof localStorage === 'undefined' || !localStorage.setItem) {
+            showError('이 브라우저에서는 장바구니를 사용할 수 없습니다. (localStorage 미지원)');
+            return;
+          }
+          getCart();
+        } catch (e) {
+          showError('장바구니를 불러올 수 없습니다. (시크릿 모드에서는 localStorage가 비활성화될 수 있습니다.)');
+          return;
+        }
+        var btnSelectAll = document.getElementById('btnSelectAll');
+        var btnUnselectAll = document.getElementById('btnUnselectAll');
+        if (btnSelectAll) {
+          btnSelectAll.onclick = function () {
+            if (saveCart(selectAll(getItems()))) { render(); } else { showError('저장할 수 없습니다. (시크릿/비공개 모드에서는 localStorage가 비활성화될 수 있습니다.)'); }
+          };
+        }
+        if (btnUnselectAll) {
+          btnUnselectAll.onclick = function () {
+            if (saveCart(unselectAll(getItems()))) { render(); } else { showError('저장할 수 없습니다.'); }
+          };
+        }
+        loadItems();
+        render();
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { try { init(); } catch (err) { showError('오류: ' + (err && err.message ? err.message : String(err))); } });
+      } else {
+        try { init(); } catch (err) { showError('오류: ' + (err && err.message ? err.message : String(err))); }
+      }
+    })();
+  </script>
+</body>
+</html>
